@@ -1,0 +1,13 @@
+name: simple_lucky
+version: 0.1.0
+
+authors:
+  - syalon <empty@email.com>
+
+targets:
+  simple_lucky:
+    main: src/simple_lucky.cr
+
+crystal: 1.2.0
+
+license: MIT
