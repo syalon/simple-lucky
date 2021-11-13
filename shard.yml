@@ -1,4 +1,4 @@
-name: simple_lucky
+name: simple-lucky
 version: 0.1.0
 
 authors:
@@ -6,7 +6,7 @@ authors:
 
 targets:
   simple_lucky:
-    main: src/simple_lucky.cr
+    main: src/simple-lucky.cr
 
 crystal: 1.2.0
 

@@ -1,2 +1,2 @@
 require "spec"
-require "../src/simple_lucky"
+require "../src/simple-lucky"
