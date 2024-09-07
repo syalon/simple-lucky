@@ -1,7 +1,7 @@
 require "option_parser"
 
 module SimpleLucky
-  VERSION = "0.1.0"
+  VERSION = "0.1.1"
 
   class App
     def self.instance
@@ -95,10 +95,20 @@ module SimpleLucky
     end
 
     def print_task(namespace)
-      main_desc = "./your_binary #{namespace.name}:#{@name}"
+      your_binary_name = if path = Process.executable_path
+                           File.basename(path)
+                         else
+                           "./your_binary"
+                         end
+
+      main_desc = "#{your_binary_name} #{namespace.name}:#{@name}"
       main_desc = "#{main_desc}[#{@args.join(",")}]" unless @args.empty?
 
-      puts sprintf("%-64s # %s", main_desc, @desc)
+      if (s = @desc) && !s.empty?
+        puts sprintf("%-64s # %s", main_desc, s)
+      else
+        puts sprintf("%-64s", main_desc)
+      end
     end
 
     def exec(args)
@@ -126,7 +136,7 @@ module SimpleLucky
 
     def task(task_name : String | Symbol, *args, &block : Task, Task::TaskBlockArgType ->)
       name_str = task_name.to_s
-      @task_hash[name_str] = Task.new(@description_indent.pop, name_str, *args, &block)
+      @task_hash[name_str] = Task.new(@description_indent.pop?, name_str, *args, &block)
     end
 
     def print_all_task
