@@ -1,9 +1,17 @@
 require "option_parser"
 
 module SimpleLucky
-  VERSION = "0.1.1"
+  VERSION = "0.1.2"
 
   class App
+    private struct SPrintData
+      getter cmd : String
+      getter desc : String?
+
+      def initialize(@cmd : String, @desc : String?)
+      end
+    end
+
     def self.instance
       @@__instance ||= new
       @@__instance.not_nil!
@@ -27,7 +35,25 @@ module SimpleLucky
     end
 
     private def print_all_task
-      @namespace_hash.each_value &.print_all_task
+      target = [] of SPrintData
+
+      your_binary_name = if path = Process.executable_path
+                           File.basename(path)
+                         else
+                           "./your_binary"
+                         end
+
+      @namespace_hash.each_value &.print_all_task(target, your_binary_name)
+
+      max_size = target.map(&.cmd.size).max
+
+      target.each do |item|
+        if (desc = item.desc) && !desc.empty?
+          puts sprintf("%-#{max_size}s    # %s", item.cmd, desc)
+        else
+          puts item.cmd
+        end
+      end
     end
 
     def run
@@ -94,21 +120,11 @@ module SimpleLucky
       args.each { |v| @args << v }
     end
 
-    def print_task(namespace)
-      your_binary_name = if path = Process.executable_path
-                           File.basename(path)
-                         else
-                           "./your_binary"
-                         end
-
+    def print_task(target, your_binary_name, namespace)
       main_desc = "#{your_binary_name} #{namespace.name}:#{@name}"
       main_desc = "#{main_desc}[#{@args.join(",")}]" unless @args.empty?
 
-      if (s = @desc) && !s.empty?
-        puts sprintf("%-64s # %s", main_desc, s)
-      else
-        puts sprintf("%-64s", main_desc)
-      end
+      target << typeof(target[0]).new(main_desc, @desc)
     end
 
     def exec(args)
@@ -139,8 +155,8 @@ module SimpleLucky
       @task_hash[name_str] = Task.new(@description_indent.pop?, name_str, *args, &block)
     end
 
-    def print_all_task
-      @task_hash.each_value &.print_task(self)
+    def print_all_task(target, your_binary_name)
+      @task_hash.each_value &.print_task(target, your_binary_name, self)
     end
   end
 
