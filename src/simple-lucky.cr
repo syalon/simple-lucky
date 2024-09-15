@@ -1,7 +1,7 @@
 require "option_parser"
 
 module SimpleLucky
-  VERSION = "0.1.2"
+  VERSION = "0.1.3"
 
   class App
     private struct SPrintData
@@ -17,6 +17,7 @@ module SimpleLucky
       @@__instance.not_nil!
     end
 
+    getter raw_command_string : String = ""
     @namespace_hash = {} of String => NameSpace
 
     def initialize
@@ -102,6 +103,8 @@ module SimpleLucky
 
       task = ns.task_hash[task_name]?
       raise "unknown task: #{task_name}" if task.nil?
+
+      @raw_command_string = task_cmd
 
       task.exec(task_args)
     end
