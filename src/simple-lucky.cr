@@ -1,7 +1,7 @@
 require "option_parser"
 
 module SimpleLucky
-  VERSION = "0.1.4"
+  VERSION = "0.1.5"
 
   class App
     private struct SPrintData
@@ -111,17 +111,37 @@ module SimpleLucky
   end
 
   class Task
-    alias TaskBlockArgType = Hash(String | Symbol, String)
+    class Params
+      @args = {} of String | Symbol => String
+
+      def bool?(arg_name)
+        value = self[arg_name]?
+        return false if value.nil?
+        return value.downcase == "true"
+      end
+
+      def [](idx)
+        return self[idx]?.not_nil!
+      end
+
+      def []?(arg_name : String | Symbol)
+        return @args[arg_name]?
+      end
+
+      def append(arg_name : String | Symbol, arg_value : String)
+        @args[arg_name] = arg_value
+      end
+    end
 
     getter desc : String?
     getter name : String
 
     @args = [] of String | Symbol
-    @block : Proc(self, TaskBlockArgType, Nil)
+    @block : Proc(self, Task::Params, Nil)
 
     @str_to_symbol_hash = {} of String => Symbol
 
-    def initialize(@desc, @name, *args, &@block : self, Task::TaskBlockArgType ->)
+    def initialize(@desc, @name, *args, &@block : self, Task::Params ->)
       args.each do |arg_name|
         @args << arg_name
 
@@ -137,7 +157,7 @@ module SimpleLucky
     end
 
     def exec(task_args : Array(String)?)
-      final_args = {} of String | Symbol => String
+      final_args = Params.new
 
       if task_args
         arg_name_array = @args.dup
@@ -153,7 +173,7 @@ module SimpleLucky
             arg_name = @str_to_symbol_hash[str_name]? || str_name
 
             if arg_name_array.delete(arg_name)
-              final_args[arg_name] = kv[1]
+              final_args.append(arg_name, kv[1])
             else
               raise "invalid command argument: #{arg_value}"
             end
@@ -166,7 +186,7 @@ module SimpleLucky
         common_params.each do |arg_value|
           arg_name = arg_name_array.shift?
           raise "redundant command argument: #{arg_value}" if arg_name.nil?
-          final_args[arg_name] = arg_value
+          final_args.append(arg_name, arg_value)
         end
       end
 
@@ -187,7 +207,7 @@ module SimpleLucky
       @description_indent << description
     end
 
-    def task(task_name : String | Symbol, *args, &block : Task, Task::TaskBlockArgType ->)
+    def task(task_name : String | Symbol, *args, &block : Task, Task::Params ->)
       name_str = task_name.to_s
       @task_hash[name_str] = Task.new(@description_indent.pop?, name_str, *args, &block)
     end
