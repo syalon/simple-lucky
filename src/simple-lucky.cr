@@ -1,7 +1,7 @@
 require "option_parser"
 
 module SimpleLucky
-  VERSION = "0.1.3"
+  VERSION = "0.1.4"
 
   class App
     private struct SPrintData
@@ -119,8 +119,14 @@ module SimpleLucky
     @args = [] of String | Symbol
     @block : Proc(self, TaskBlockArgType, Nil)
 
+    @str_to_symbol_hash = {} of String => Symbol
+
     def initialize(@desc, @name, *args, &@block : self, Task::TaskBlockArgType ->)
-      args.each { |v| @args << v }
+      args.each do |arg_name|
+        @args << arg_name
+
+        @str_to_symbol_hash[arg_name.to_s] = arg_name if arg_name.is_a?(Symbol)
+      end
     end
 
     def print_task(target, your_binary_name, namespace)
@@ -130,12 +136,40 @@ module SimpleLucky
       target << typeof(target[0]).new(main_desc, @desc)
     end
 
-    def exec(args)
+    def exec(task_args : Array(String)?)
       final_args = {} of String | Symbol => String
-      @args.each_with_index do |value, idx|
-        arg = args.try &.[]?(idx)
-        final_args[value] = arg if arg
+
+      if task_args
+        arg_name_array = @args.dup
+        common_params = [] of String
+
+        # => 1、先分配 hash 关键字参数
+        task_args.each do |arg_value|
+          kv = arg_value.split(":").map(&.strip)
+          if kv.size > 2
+            raise "invalid command argument: #{arg_value}"
+          elsif kv.size == 2
+            str_name = kv[0]
+            arg_name = @str_to_symbol_hash[str_name]? || str_name
+
+            if arg_name_array.delete(arg_name)
+              final_args[arg_name] = kv[1]
+            else
+              raise "invalid command argument: #{arg_value}"
+            end
+          else
+            common_params << arg_value
+          end
+        end
+
+        # => 2、再分配普通参数
+        common_params.each do |arg_value|
+          arg_name = arg_name_array.shift?
+          raise "redundant command argument: #{arg_value}" if arg_name.nil?
+          final_args[arg_name] = arg_value
+        end
       end
+
       @block.call(self, final_args)
     end
   end
